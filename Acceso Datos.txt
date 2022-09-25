@@ -1,0 +1,161 @@
+Form.cs
+using System;
+using System.Windows.Forms;
+
+namespace Practica2
+{
+    public partial class Form : System.Windows.Forms.Form
+    {
+        public Form()
+        {
+            InitializeComponent();
+        }
+
+        private void btn1_Click(object sender, EventArgs e)
+        {
+            int registrosAfectados = 0;
+            registrosAfectados = Conexion.EjecutaConsulta(textBox1.Text);
+            AccionesComunes.Mensaje("Registros Afectados: " + registrosAfectados);
+            AccionesComunes.LlenarCombo(textBox1.Text,cmb1);
+        }
+
+        private void cmb1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            label1.Text = cmb1.SelectedIndex.ToString();
+        }
+
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnAceptarGrid_Click(object sender, EventArgs e)
+        {
+            AccionesComunes.LlenarGridView(textBox1.Text,dataGridView1);
+        }
+
+        private void btnAceptarListView_Click(object sender, EventArgs e)
+        {
+            AccionesComunes.LlenarListView(textBox1.Text,listView1);
+        }
+    }
+}
+
+Conexion.cs
+using System;
+using System.Data;
+using System.Data.SqlClient;
+
+namespace Practica2
+{
+    internal class Conexion
+    {
+        static SqlConnection cnx;
+        static string cadena = @"Server=DESKTOP-2BIDTQ9\SQLEXPRESS;Database=REGISTRO;Trusted_Connection=True;";
+        private static void Conectar()
+        {
+             cnx = new SqlConnection(cadena);
+            cnx.Open();
+        }
+        private static void Desconectar()
+        {
+            cnx.Close();
+            cnx = null;
+        }
+        public static int EjecutaConsulta(string consulta)
+        {
+            int filasAfectadas = 0;
+            Conectar();
+            SqlCommand cmd = new SqlCommand(consulta, cnx);
+            filasAfectadas = cmd.ExecuteNonQuery();
+            Desconectar();
+            return filasAfectadas;
+        }
+        public static DataTable EjecutaSeleccion(string consulta)
+        {
+            DataTable dt = new DataTable();
+            Conectar();
+            SqlDataAdapter da = new SqlDataAdapter(consulta, cnx);
+            da.Fill(dt);
+            Desconectar();
+            return dt;
+        }
+        public static Object EjecutarEscalar(string consulta)
+        {
+            DataTable dt = new DataTable();
+            Conectar();
+            SqlDataAdapter da = new SqlDataAdapter(consulta, cnx);
+            da.Fill(dt);
+            Desconectar();
+            return dt.Rows[0].ItemArray[0];
+        }
+    }
+}
+
+
+AccionesComunes.cs
+using System.Windows.Forms;
+using System.Data;
+namespace Practica2
+{
+    internal class AccionesComunes
+    {
+        public static void Mensaje(string mensaje)
+        {
+            MessageBox.Show(mensaje,"AVISO!!", MessageBoxButtons.OK,MessageBoxIcon.Information);
+        }
+
+        public static void LlenarCombo(string consulta, ComboBox combo)
+        {
+            DataTable dt;
+            dt=Conexion.EjecutaSeleccion(consulta);
+            if (dt==null)
+            {
+                return;
+            }
+            combo.Items.Clear();
+            combo.Items.Add("TODOS");
+            for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                combo.Items.Add(dt.Rows[i].ItemArray[1].ToString());
+            }
+        }
+
+        public static void LlenarGridView(string consulta, DataGridView datag)
+        {
+            DataTable dt;
+            dt = Conexion.EjecutaSeleccion(consulta);
+            datag.DataSource = dt;
+        }
+
+        public static void LlenarListView(string consulta, ListView list)
+        {
+            list.Clear();
+            DataTable dt;
+            list.GridLines = true;
+            list.View = View.Details;
+            ListViewItem campo;
+            dt = Conexion.EjecutaSeleccion(consulta);
+            for (int i = 0; i < dt.Columns.Count; i++)
+            {
+                list.Columns.Add(dt.Columns[i].ColumnName, 100);
+            }
+            for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                DataRow dr = dt.Rows[i];
+                campo = new ListViewItem(dr[dt.Columns[0].ColumnName].ToString());
+                for (int j = 1; j < dt.Columns.Count; j++)
+                {
+                    campo.SubItems.Add(dr[dt.Columns[j].ColumnName].ToString());
+                }
+                list.Items.Add(campo);
+            }
+        }
+    }
+}
+
